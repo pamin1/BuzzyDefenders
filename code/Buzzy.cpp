@@ -12,7 +12,7 @@ ECE_Buzzy::ECE_Buzzy(const sf::Texture &tex)
 
 void ECE_Buzzy::handleKeyPress(const sf::Event &e)
 {
-    // event handling and 
+    // event handling and movement bounds
     if (e.key.code == sf::Keyboard::Left && this->getPosition().x > 0)
     {
         this->setPosition(this->getPosition().x - 10, this->getPosition().y);
