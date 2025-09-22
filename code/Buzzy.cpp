@@ -23,8 +23,4 @@ void ECE_Buzzy::handleKeyPress(const sf::Event &e)
         this->setPosition(this->getPosition().x + 10, this->getPosition().y);
         std::cout << "right\n";
     }
-    else if (e.key.code == sf::Keyboard::Space)
-    {
-        std::cout << "laser...\n";
-    }
 }
