@@ -3,30 +3,19 @@
 #include "LaserBlast.h"
 
 #include <SFML/Graphics.hpp>
+#include <algorithm>
 #include <cstdlib>
 #include <iostream>
 #include <limits>
-#include <list>
 #include <random>
+#include <vector>
 
 enum gameState
 {
   HOME,
   PLAYING,
-  GAMEOVER,
-  EXIT
+  GAMEOVER
 };
-
-// templated vector for tracking LaserBlast objects
-template <typename T>
-int firstFreeIndex(std::vector<T> &v)
-{
-  for (int i = 0; i < (int)v.size(); ++i)
-    if (!v[i].isAlive())
-      return i;
-  v.emplace_back(); // grow if none free
-  return (int)v.size() - 1;
-}
 
 int main()
 {
@@ -34,13 +23,15 @@ int main()
   gameState state = HOME;                        // game state
   constexpr int winWidth = 800, winHeight = 640; // window dimensions
   constexpr int ROWS = 4, COLS = 8;              // num rows and cols of enemies
-  float speed = 0.25f;                           // "move speed" of objects
+  float speed = 0.20f;                           // "move speed" of objects
   int dir = -1;                                  // left -> -1,  right -> +1
   float stepUp = -4.f;                           // dist to move up
-  std::list<ECE_LaserBlast> pBlast;              // player laser blasts
-  std::list<ECE_LaserBlast> eBlast;              // enemy laser blasts
+  std::vector<ECE_LaserBlast> pBlast;            // player laser blasts
+  std::vector<ECE_LaserBlast> eBlast;            // enemy laser blasts
   sf::Clock eFire;                               // clock to space enemy laser blasts
   float eFireDelay = 2.0f;                       // timer
+  ECE_Enemy enemies[ROWS][COLS];                 // array for enemy objects
+  int numTagged = 0;                             // count for how many target are hit
 
   // create variable sized window for the game
   sf::RenderWindow window(sf::VideoMode(winWidth, winHeight), "Buzzy Defender");
@@ -66,18 +57,6 @@ int main()
   dogTex.loadFromFile("graphics/bulldog.png");
   tigerTex.loadFromFile("graphics/clemson_tigers.png");
 
-  // initialize enemies into 2D array
-  ECE_Enemy enemies[ROWS][COLS];
-  for (int i = 0; i < ROWS; ++i)
-  {
-    for (int j = 0; j < COLS; ++j)
-    {
-      const sf::Texture &tex = (i % 2 == 0) ? dogTex : tigerTex;
-      enemies[i][j] = ECE_Enemy(tex);
-      enemies[i][j].setPosition(80.f + 80.f * j, 280.f + 90.f * i);
-    }
-  }
-
   while (window.isOpen())
   {
     sf::Event event;
@@ -102,8 +81,23 @@ int main()
               }
           }
         }
+        numTagged = 0;
+        pBlast.clear();
+        eBlast.clear();
+        buzzy.setStatus(false);
+        // initialize enemies into 2D array
+        for (int i = 0; i < ROWS; ++i)
+        {
+          for (int j = 0; j < COLS; ++j)
+          {
+            const sf::Texture &tex = (i % 2 == 0) ? dogTex : tigerTex;
+            enemies[i][j] = ECE_Enemy(tex);
+            enemies[i][j].setPosition(80.f + 80.f * j, 280.f + 90.f * i);
+          }
+        }
         break;
       case (PLAYING):
+      {
         ECE_LaserBlast *laser;
         window.clear(sf::Color(112, 146, 190));
         while (window.pollEvent(event))
@@ -117,7 +111,7 @@ int main()
               if (event.key.code == sf::Keyboard::Space)
               {
                 // shoot a laser
-                pBlast.emplace_back(ECE_LaserBlast(buzzy.getPosition()));
+                pBlast.push_back(ECE_LaserBlast(buzzy.getPosition(), sf::Color::Green));
               }
               buzzy.handleKeyPress(event);
           }
@@ -132,18 +126,30 @@ int main()
         {
           for (int j = 0; j < COLS; ++j)
           {
-            ECE_Enemy temp = enemies[i][j];
-            for (auto &b : pBlast) {
-                // each sprite has a designated width and x,y position
-                // check if the bottom pixels overlap with the range of the sprite position
-                
+            for (int k = 0; k < pBlast.size(); k++)
+            {
+              auto tempBounds = enemies[i][j].getGlobalBounds();
+              auto laseBounds = pBlast.at(k).getGlobalBounds();
+
+              // found intersection means that the laser and enemy collided
+              if (!enemies[i][j].getStatus() && tempBounds.intersects(laseBounds))
+              {
+                enemies[i][j].setStatus(true); // indicate that the enemy is hit
+                auto it = pBlast.begin();
+                std::advance(it, k);
+                pBlast.erase(it);
+                numTagged++;
+              }
             }
             enemies[i][j].move(dx, 0.0f);
 
             // track if enemies hit border
             const auto b = enemies[i][j].getGlobalBounds();
-            minX = std::min(minX, b.left);
-            maxX = std::max(maxX, b.left + b.width);
+            if (!enemies[i][j].getStatus())
+            {
+              minX = std::min(minX, b.left);
+              maxX = std::max(maxX, b.left + b.width);
+            }
           }
         }
 
@@ -166,9 +172,9 @@ int main()
         std::mt19937 rng{std::random_device{}()};
         int rnX = rand() % ROWS;
         int rnY = rand() % COLS;
-        if (eFire.getElapsedTime().asSeconds() >= eFireDelay)
+        if (!enemies[rnX][rnY].getStatus() && eFire.getElapsedTime().asSeconds() >= eFireDelay)
         {
-          eBlast.emplace_back(ECE_LaserBlast(enemies[rnX][rnY].getPosition()));
+          eBlast.push_back(ECE_LaserBlast(enemies[rnX][rnY].getPosition(), sf::Color::Red));
           eFire.restart();
         }
 
@@ -177,7 +183,10 @@ int main()
         {
           for (const auto &e : enemies[i])
           {
-            window.draw(e);
+            if (!e.getStatus())
+            {
+              window.draw(e);
+            }
           }
         }
 
@@ -188,14 +197,32 @@ int main()
           window.draw(b);
         }
 
-        for (auto &b : eBlast)
+        for (int i = 0; i < eBlast.size(); i++)
         {
+          auto &b = eBlast.at(i);
+          auto tempBounds = buzzy.getGlobalBounds();
+          auto laseBounds = b.getGlobalBounds();
+          if (tempBounds.intersects(laseBounds))
+          {
+            buzzy.setStatus(true); // indicate that the enemy is hit
+            std::cout << "You lost, game over\n";
+            state = HOME;
+          }
+
           b.move(0, -speed);
           window.draw(b);
         }
 
         window.draw(buzzy);
         window.display();
+
+        if (numTagged == ROWS * COLS)
+        {
+          std::cout << "You won, game over\n";
+          state = HOME;
+        }
+        break;
+      }
     }
   }
 }
