@@ -9,8 +9,10 @@ Implementation file for Enemy object.
 
 #include "Enemy.h"
 
-ECE_Enemy::ECE_Enemy(){};
-
+/**
+ * @brief Constructor to initialize Sprite with Texture.
+ * @param tex const reference to the Texture populating Sprite parent class.
+ */
 ECE_Enemy::ECE_Enemy(const sf::Texture &tex)
     : sf::Sprite(tex)
 {

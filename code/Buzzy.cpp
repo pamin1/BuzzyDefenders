@@ -9,6 +9,10 @@ Implementation file for Buzzy object.
 
 #include "Buzzy.h"
 
+/**
+ * @brief Constructor to initialize Sprite with Texture.
+ * @param tex const reference to the Texture populating Sprite parent class.
+ */
 ECE_Buzzy::ECE_Buzzy(const sf::Texture &tex)
     : sf::Sprite(tex)
 {
@@ -18,6 +22,10 @@ ECE_Buzzy::ECE_Buzzy(const sf::Texture &tex)
   this->setScale(wScale, hScale);
 }
 
+/**
+ * @brief Handles left/right movement of Buzzy object.
+ * @param e user input sf::Event object.
+ */
 void ECE_Buzzy::handleKeyPress(const sf::Event &e)
 {
   // event handling and movement bounds

@@ -29,18 +29,19 @@ enum gameState
 int main()
 {
   // initialize game variables
-  gameState state = HOME;                        // game state
+  // constexpr for const values that will not change
   constexpr int winWidth = 800, winHeight = 640; // window dimensions
   constexpr int ROWS = 4, COLS = 8;              // num rows and cols of enemies
-  float speed = 0.20f;                           // "move speed" of objects
+  constexpr float speed = 0.20f;                 // "move speed" of objects
+  constexpr float stepUp = -4.f;                 // dist to move up
+  constexpr float eFireDelay = 2.0f;             // timer
   int dir = -1;                                  // left -> -1,  right -> +1
-  float stepUp = -4.f;                           // dist to move up
+  int numTagged = 0;                             // count for how many target are hit
   std::vector<ECE_LaserBlast> pBlast;            // player laser blasts
   std::vector<ECE_LaserBlast> eBlast;            // enemy laser blasts
   sf::Clock eFire;                               // clock to space enemy laser blasts
-  float eFireDelay = 2.0f;                       // timer
   ECE_Enemy enemies[ROWS][COLS];                 // array for enemy objects
-  int numTagged = 0;                             // count for how many target are hit
+  gameState state = HOME;                        // game state
 
   // create variable sized window for the game
   sf::RenderWindow window(sf::VideoMode(winWidth, winHeight), "Buzzy Defender");
@@ -107,6 +108,7 @@ int main()
             enemies[i][j].setPosition(80.f + 80.f * j, 280.f + 90.f * i);
           }
         }
+        
         break;
       case (PLAYING):
       {

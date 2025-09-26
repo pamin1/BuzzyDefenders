@@ -12,13 +12,22 @@ Header file for Enemy object. Controls the hit status of the object.
 class ECE_Enemy : public sf::Sprite
 {
 public:
-  ECE_Enemy();
+  ECE_Enemy(){};
   ECE_Enemy(const sf::Texture &tex);
-  
+
+  /**
+   * @brief Changes hit status of the object.
+   * @param s Boolean value to change the status to.
+   */
   void setStatus(bool s)
   {
     this->status = s;
   }
+
+  /**
+   * @brief Returns the hit status of the object.
+   * @return Returns boolean hit status value.
+   */
   bool getStatus() const
   {
     return status;

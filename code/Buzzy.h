@@ -15,10 +15,20 @@ public:
   ECE_Buzzy(const sf::Texture &tex);
   void moveBuzzy(const sf::Event &e);
   void handleKeyPress(const sf::Event &e);
+
+  /**
+   * @brief Changes hit status of the object.
+   * @param s Boolean value to change the status to.
+   */
   void setStatus(bool s)
   {
     this->status = s;
   }
+
+  /**
+   * @brief Returns the hit status of the object.
+   * @return Returns boolean hit status value.
+   */
   bool getStatus() const
   {
     return status;
