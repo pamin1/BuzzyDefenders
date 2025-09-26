@@ -2,7 +2,8 @@
 
 class ECE_Enemy : public sf::Sprite
 {
-  public:
-    ECE_Enemy();
-    explicit ECE_Enemy(const sf::Texture &tex);
+public:
+  ECE_Enemy();
+  ECE_Enemy(const sf::Texture &tex);
+  void display(sf::RenderWindow &win);
 };
