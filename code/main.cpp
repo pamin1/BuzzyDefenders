@@ -30,9 +30,19 @@ int firstFreeIndex(std::vector<T> &v)
 
 int main()
 {
+  // initialize game variables
+  gameState state = HOME;                        // game state
+  constexpr int winWidth = 800, winHeight = 640; // window dimensions
+  constexpr int ROWS = 4, COLS = 8;              // num rows and cols of enemies
+  float speed = 0.25f;                           // "move speed" of objects
+  int dir = -1;                                  // left -> -1,  right -> +1
+  float stepUp = -4.f;                           // dist to move up
+  std::list<ECE_LaserBlast> pBlast;              // player laser blasts
+  std::list<ECE_LaserBlast> eBlast;              // enemy laser blasts
+  sf::Clock eFire;                               // clock to space enemy laser blasts
+  float eFireDelay = 2.0f;                       // timer
+
   // create variable sized window for the game
-  constexpr int winWidth = 800, winHeight = 640;
-  constexpr int ROWS = 4, COLS = 8;
   sf::RenderWindow window(sf::VideoMode(winWidth, winHeight), "Buzzy Defender");
   sf::Texture texHome;
   if (!texHome.loadFromFile("graphics/Start_Screen.png"))
@@ -56,6 +66,7 @@ int main()
   dogTex.loadFromFile("graphics/bulldog.png");
   tigerTex.loadFromFile("graphics/clemson_tigers.png");
 
+  // initialize enemies into 2D array
   ECE_Enemy enemies[ROWS][COLS];
   for (int i = 0; i < ROWS; ++i)
   {
@@ -67,51 +78,6 @@ int main()
     }
   }
 
-  float speed = 0.5f;
-  int dir = -1;        // left -> -1,  right -> +1
-  float stepUp = -4.f; // dist to move up
-
-  // lambda function for moving all the enemy sprites
-  auto moveFormation = [&](float dx, float dy)
-  {
-    for (int i = 0; i < ROWS; ++i)
-      for (int j = 0; j < COLS; ++j)
-        enemies[i][j].move(dx, dy);
-  };
-
-  // lambda for getting the minimum and maximum X position of all the enemy sprites
-  auto formationBounds = [&]()
-  {
-    float minX = std::numeric_limits<float>::max();
-    float maxX = std::numeric_limits<float>::lowest();
-    for (int i = 0; i < ROWS; ++i)
-    {
-      for (int j = 0; j < COLS; ++j)
-      {
-        const auto b = enemies[i][j].getGlobalBounds();
-        minX = std::min(minX, b.left);
-        maxX = std::max(maxX, b.left + b.width);
-      }
-    }
-    return std::pair<float, float>{minX, maxX};
-  };
-
-  std::list<ECE_LaserBlast> pBlast;
-  std::list<ECE_LaserBlast> eBlast;
-
-  auto moveLaserBlast = [&](float dy)
-  {
-    for (auto &b : pBlast)
-    {
-      b.move(0, dy);
-    }
-    for (auto b : eBlast)
-    {
-      b.move(0, -dy);
-    }
-  };
-
-  gameState state = HOME;
   while (window.isOpen())
   {
     sf::Event event;
@@ -151,34 +117,62 @@ int main()
               if (event.key.code == sf::Keyboard::Space)
               {
                 // shoot a laser
-                pBlast.emplace_back(ECE_LaserBlast(buzzy.getPosition(), {6.f, 20.f}));
-                std::cout
-                    << buzzy.getPosition().x << ", " << buzzy.getPosition().y << "\n";
+                pBlast.emplace_back(ECE_LaserBlast(buzzy.getPosition()));
               }
               buzzy.handleKeyPress(event);
           }
+        }
+
+        // horizontal move first
+        // get the bounds for the enemy movements
+        float dx = dir * speed;
+        float minX = std::numeric_limits<float>::max();
+        float maxX = std::numeric_limits<float>::lowest();
+        for (int i = 0; i < ROWS; ++i)
+        {
+          for (int j = 0; j < COLS; ++j)
+          {
+            ECE_Enemy temp = enemies[i][j];
+            for (auto &b : pBlast) {
+                // each sprite has a designated width and x,y position
+                // check if the bottom pixels overlap with the range of the sprite position
+                
+            }
+            enemies[i][j].move(dx, 0.0f);
+
+            // track if enemies hit border
+            const auto b = enemies[i][j].getGlobalBounds();
+            minX = std::min(minX, b.left);
+            maxX = std::max(maxX, b.left + b.width);
+          }
+        }
+
+        // revert and shift up if the enemies hit border
+        float L = 0.0;
+        float R = window.getSize().x;
+        if (minX < L || maxX > R)
+        {
+          for (int i = 0; i < ROWS; ++i)
+          {
+            for (int j = 0; j < COLS; ++j)
+            {
+              enemies[i][j].move(-dx, stepUp);
+            }
+          }
+          dir = -dir; // flip
         }
 
         // choose random num for enemy blast
         std::mt19937 rng{std::random_device{}()};
         int rnX = rand() % ROWS;
         int rnY = rand() % COLS;
-        // eBlast.emplace_back(ECE_LaserBlast(enemies[rnX][rnY].getPosition()));
-
-        // horizontal move
-        float dx = dir * speed;
-        moveFormation(dx, 0.f);
-
-        // get the bounds for the enemy movements
-        auto [minX, maxX] = formationBounds();
-        float L = 0.0;
-        float R = window.getSize().x;
-        if (minX < L || maxX > R)
+        if (eFire.getElapsedTime().asSeconds() >= eFireDelay)
         {
-          moveFormation(-dx, stepUp); // revert horizontal, go up
-          dir = -dir;                 // flip
+          eBlast.emplace_back(ECE_LaserBlast(enemies[rnX][rnY].getPosition()));
+          eFire.restart();
         }
 
+        // draw enemies
         for (int i = 0; i < ROWS; i++)
         {
           for (const auto &e : enemies[i])
@@ -187,16 +181,19 @@ int main()
           }
         }
 
-        // vertical move for laser blasts
-        moveLaserBlast(speed);
+        // move and draw laser blasts
         for (auto &b : pBlast)
         {
+          b.move(0, speed);
           window.draw(b);
         }
+
         for (auto &b : eBlast)
         {
+          b.move(0, -speed);
           window.draw(b);
         }
+
         window.draw(buzzy);
         window.display();
     }
