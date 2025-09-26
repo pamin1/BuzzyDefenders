@@ -1,3 +1,12 @@
+/*
+Author: Prachit Amin
+Class: ECE4122 A
+Last Date Modified: 09/26/2025
+
+Description:
+Main game logic for Buzzy Defenders game.
+*/
+
 #include "Buzzy.h"
 #include "Enemy.h"
 #include "LaserBlast.h"
@@ -10,11 +19,11 @@
 #include <random>
 #include <vector>
 
+// simple state machine for game logic
 enum gameState
 {
   HOME,
-  PLAYING,
-  GAMEOVER
+  PLAYING
 };
 
 int main()
@@ -67,6 +76,8 @@ int main()
         window.clear();
         window.draw(home);
         window.display();
+
+        // check for game start condition
         while (window.pollEvent(event))
         {
           switch (event.type)
@@ -81,16 +92,17 @@ int main()
               }
           }
         }
+
+        // reset/intialization for actively changing variables
         numTagged = 0;
         pBlast.clear();
         eBlast.clear();
         buzzy.setStatus(false);
-        // initialize enemies into 2D array
         for (int i = 0; i < ROWS; ++i)
         {
           for (int j = 0; j < COLS; ++j)
           {
-            const sf::Texture &tex = (i % 2 == 0) ? dogTex : tigerTex;
+            const sf::Texture &tex = (i % 2 == 0) ? dogTex : tigerTex; // alternating lines of dawgs and tigers
             enemies[i][j] = ECE_Enemy(tex);
             enemies[i][j].setPosition(80.f + 80.f * j, 280.f + 90.f * i);
           }
@@ -100,6 +112,8 @@ int main()
       {
         ECE_LaserBlast *laser;
         window.clear(sf::Color(112, 146, 190));
+
+        // check for move or blast
         while (window.pollEvent(event))
         {
           switch (event.type)
@@ -126,6 +140,7 @@ int main()
         {
           for (int j = 0; j < COLS; ++j)
           {
+            // check if any of the laser blasts intersected the enemy
             for (int k = 0; k < pBlast.size(); k++)
             {
               auto tempBounds = enemies[i][j].getGlobalBounds();
@@ -137,10 +152,11 @@ int main()
                 enemies[i][j].setStatus(true); // indicate that the enemy is hit
                 auto it = pBlast.begin();
                 std::advance(it, k);
-                pBlast.erase(it);
+                pBlast.erase(it); // remove the blast so it is not misinterpreted later
                 numTagged++;
               }
             }
+            // temporary move
             enemies[i][j].move(dx, 0.0f);
 
             // track if enemies hit border
@@ -154,9 +170,7 @@ int main()
         }
 
         // revert and shift up if the enemies hit border
-        float L = 0.0;
-        float R = window.getSize().x;
-        if (minX < L || maxX > R)
+        if (minX < 0.0 || maxX > winWidth)
         {
           for (int i = 0; i < ROWS; ++i)
           {
@@ -165,10 +179,10 @@ int main()
               enemies[i][j].move(-dx, stepUp);
             }
           }
-          dir = -dir; // flip
+          dir = -dir; // flip directions in this case
         }
 
-        // choose random num for enemy blast
+        // choose random index for enemy to shoot laser
         std::mt19937 rng{std::random_device{}()};
         int rnX = rand() % ROWS;
         int rnY = rand() % COLS;
@@ -197,6 +211,7 @@ int main()
           window.draw(b);
         }
 
+        // move, draw, and check if enemy laser hit buzzy
         for (int i = 0; i < eBlast.size(); i++)
         {
           auto &b = eBlast.at(i);
@@ -204,7 +219,8 @@ int main()
           auto laseBounds = b.getGlobalBounds();
           if (tempBounds.intersects(laseBounds))
           {
-            buzzy.setStatus(true); // indicate that the enemy is hit
+            // lose condition
+            buzzy.setStatus(true);
             std::cout << "You lost, game over\n";
             state = HOME;
           }
@@ -213,14 +229,16 @@ int main()
           window.draw(b);
         }
 
-        window.draw(buzzy);
-        window.display();
-
+        // win condition
         if (numTagged == ROWS * COLS)
         {
           std::cout << "You won, game over\n";
           state = HOME;
         }
+
+        window.draw(buzzy);
+        window.display();
+
         break;
       }
     }

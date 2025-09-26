@@ -1,3 +1,12 @@
+/*
+Author: Prachit Amin
+Class: ECE4122 A
+Last Date Modified: 09/26/2025
+
+Description:
+Implementation of LaserBlast object.
+*/
+
 #include "LaserBlast.h"
 
 ECE_LaserBlast::ECE_LaserBlast(const sf::Vector2f &pos, sf::Color c, sf::Vector2f size)

@@ -1,3 +1,12 @@
+/*
+Author: Prachit Amin
+Class: ECE4122 A
+Last Date Modified: 09/26/2025
+
+Description:
+Header file for LaserBlasts object.
+*/
+
 #include <SFML/Graphics.hpp>
 
 class ECE_LaserBlast : public sf::RectangleShape
